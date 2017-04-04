@@ -6,7 +6,7 @@
 #include <cstdio>
 
 #include "GL_framework.h"
-
+//edu no domina
 static GLFWwindow *window;
 
 extern void PhysicsInit();
