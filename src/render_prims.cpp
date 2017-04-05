@@ -4,9 +4,9 @@
 #include <cstdio>
 
 //Boolean variables allow to show/hide the primitives
-bool renderSphere = true;
+bool renderSphere = false;
 bool renderCapsule = false;
-bool renderParticles = false;
+bool renderParticles = true;
 bool renderCloth = true;
 
 namespace Sphere {

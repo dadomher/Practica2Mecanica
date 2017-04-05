@@ -6,7 +6,7 @@
 #include <cstdio>
 
 #include "GL_framework.h"
-//edu no domina
+
 static GLFWwindow *window;
 
 extern void PhysicsInit();
@@ -94,6 +94,7 @@ int main(int argc, char** argv){
 				MouseEvent::Button::None)))};
 			GLmousecb(ev);
 		}
+
 		GLrender();
 	
 		glfwSwapBuffers(window);//Swap front and back buffers
