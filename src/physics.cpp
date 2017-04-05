@@ -38,6 +38,8 @@ struct particle {
 	vec3 vel;
 	vec3 postVel;
 
+	vec3 force = vec3(0.0f);
+
 	int row, col;
 
 	vector<particle*> nearPart;
@@ -231,19 +233,45 @@ void PhysicsInit() {
 void PhysicsUpdate(float dt) {
 	//TODO
 	for (int i = 0; i < maxPart; i++) {
+		//Calcular fuerzas con las particulas adyacentes
+		float springConst = 0.1f;
+		float damping = 0.01f;
+		for (int j = 0; j < particles[i].nearPart.size(); j++) {
+			vec3 partVec = vec3(particles[i].position.x - particles[i].nearPart[j]->position.x, particles[i].position.y - particles[i].nearPart[j]->position.y,
+								particles[i].position.z - particles[i].nearPart[j]->position.z);
+
+			float dist = sqrt(pow(partVec.x, 2) + pow(partVec.y, 2) + pow(partVec.z, 2));
+
+			partVec.x /= dist;
+			partVec.y /= dist;
+			partVec.z /= dist;
+
+			vec3 partVecVel = vec3(particles[i].vel.x - particles[i].nearPart[j]->vel.x, particles[i].vel.y - particles[i].nearPart[j]->vel.y, particles[i].vel.z - particles[i].nearPart[j]->vel.z);
+
+			/*float fuerzaM = -(dist - partDist) + springConst;
+
+			float fuerzaD = -damping*(partVec.x * partVecVel.x + partVec.y * partVecVel.y + partVec.z * partVecVel.z);
+
+			force += fuerzaM + fuerzaD;*/
+			particles[i].force += -(springConst * (dist - partDist) + (damping * partVecVel) * (partVec / dist))*(partVec / dist);
+		}
+
+		//Calcular posicion
 		particles[i].postPos.x = particles[i].position.x + dt * particles[i].vel.x;
 		particles[i].postPos.y = particles[i].position.y + dt * particles[i].vel.y;
 		particles[i].postPos.z = particles[i].position.z + dt * particles[i].vel.z;
 
 		//Calcular velocidad
-		particles[i].postVel.x = particles[i].vel.x + dt * (forceX / particles[i].mass);
-		particles[i].postVel.y = particles[i].vel.y + dt * (forceY / particles[i].mass);
-		particles[i].postVel.z = particles[i].vel.z + dt * (forceZ / particles[i].mass);
+		particles[i].postVel.x = particles[i].vel.x + dt * (/*forceX**/particles[i].force.x / particles[i].mass);
+		particles[i].postVel.y = particles[i].vel.y + dt * (forceY*particles[i].force.y / particles[i].mass);
+		particles[i].postVel.z = particles[i].vel.z + dt * (/*forceZ**/particles[i].force.z / particles[i].mass);
 
+		//Aplicar nueva posicion
 		particles[i].position.x = particles[i].postPos.x;
 		particles[i].position.y = particles[i].postPos.y;
 		particles[i].position.z = particles[i].postPos.z;
 
+		//Aplicar nueva velocidad
 		particles[i].vel.x = particles[i].postVel.x;
 		particles[i].vel.y = particles[i].postVel.y;
 		particles[i].vel.z = particles[i].postVel.z;
