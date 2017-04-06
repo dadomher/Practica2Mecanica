@@ -7,11 +7,13 @@
 using namespace std;
 using namespace glm;
 
-float posSphere[3] = { 0.0f,1.0f,0.0f };
-float radiusSphere = 1.0f;
+float RandomFloat(float a, float b);
+
+float posSphere[3];
+float radiusSphere;
 
 float forceX = 0.0f;
-float forceY = -0.8f;
+float forceY = -9.8f;
 float forceZ = 0.0f;
 
 //Normales de los planos del eje X
@@ -84,11 +86,11 @@ void GUI() {
 	}
 
 	{	//Propiedades
-		ImGui::Begin("Propiedades Esfera:");
-		ImGui::DragFloat3("Position", posSphere, 0.1f);
-		ImGui::DragFloat("Radius", &radiusSphere, 0.1f, 0.1f, 10.0f);
+		//ImGui::Begin("Propiedades Esfera:");
+		/*ImGui::DragFloat3("Position", posSphere, 0.1f);
+		ImGui::DragFloat("Radius", &radiusSphere, 0.1f, 0.1f, 10.0f);*/
 
-		ImGui::Text("\nPropiedades Particulas:");
+		ImGui::Begin("\nPropiedades Particulas:");
 		ImGui::DragFloat("Distance", &partDist, 0.1f, 0.1f, 2.0f);
 
 		ImGui::Text("\nPropiedades Stretch:");
@@ -170,7 +172,13 @@ void findNearParts(particle *actualPart, particle *particles) {
 	}
 }
 
+
 void PhysicsInit() {
+	radiusSphere = RandomFloat(1, 4);
+	posSphere[0] = RandomFloat(-3, 3);
+	posSphere[1] = RandomFloat(1, 5);
+	posSphere[2] = RandomFloat(-3, 3);
+
 	//Calcular la normal de los planos
 	//Plano bajo
 	vec3 pointA = vec3(-5.0f, 0.0f, -5.0f);
@@ -224,18 +232,12 @@ void PhysicsInit() {
 			particles[part].vel = vec3(0.0f, -3.0f, 0.0f);
 			particles[part].row = j;
 			particles[part].col = i;
-			particles[part].mass = 1;
+			particles[part].mass = 1.0f;
 			part++;
 		}
 	}
 	for (int i = 0; i < maxPart; i++) {
-		findNearParts(&particles[i], particles);
-		if (i==37) {
-			for (int j = 0; j < particles[i].nearPart.size(); j++) {
-				cout << 1 << endl;
-			}
-		}
-		
+		findNearParts(&particles[i], particles);	
 	}
 	particles[0].vel = vec3(0.0f);
 	particles[13].vel = vec3(0.0f);
@@ -250,8 +252,8 @@ void PhysicsUpdate(float dt) {
 			particles[i].force = vec3(0.0f);
 			for (int j = 0; j < particles[i].nearPart.size(); j++) {
 				vec3 partVec = vec3(particles[i].position.x - particles[i].nearPart[j].second->position.x,
-									particles[i].position.y - particles[i].nearPart[j].second->position.y,
-									particles[i].position.z - particles[i].nearPart[j].second->position.z);
+					particles[i].position.y - particles[i].nearPart[j].second->position.y,
+					particles[i].position.z - particles[i].nearPart[j].second->position.z);
 
 				float dist = sqrt(pow(partVec.x, 2) + pow(partVec.y, 2) + pow(partVec.z, 2));
 
@@ -260,28 +262,33 @@ void PhysicsUpdate(float dt) {
 				partVec.z /= dist;
 
 				vec3 partVecVel = vec3(particles[i].vel.x - particles[i].nearPart[j].second->vel.x,
-										particles[i].vel.y - particles[i].nearPart[j].second->vel.y,
-										particles[i].vel.z - particles[i].nearPart[j].second->vel.z);
+					particles[i].vel.y - particles[i].nearPart[j].second->vel.y,
+					particles[i].vel.z - particles[i].nearPart[j].second->vel.z);
 
 				if (particles[i].nearPart[j].first == 0) {
 					particles[i].force += -(springConstStretch * (dist - partDist) + (dampingStretch * partVecVel) * (partVec))*(partVec);
-				} else if (particles[i].nearPart[j].first == 1) {
-					particles[i].force += -(springConstBend * (dist - partDist*2) + (dampingBend * partVecVel) * (partVec))*(partVec);
-				} else if (particles[i].nearPart[j].first == 2) {
+				}
+				else if (particles[i].nearPart[j].first == 1) {
+					particles[i].force += -(springConstBend * (dist - partDist * 2) + (dampingBend * partVecVel) * (partVec))*(partVec);
+				}
+				else if (particles[i].nearPart[j].first == 2) {
 					particles[i].force += -(springConstShear * (dist - partDist) + (dampingShear * partVecVel) * (partVec))*(partVec);
 				}
-
 			}
+		}
+	}
 
+	for (int i = 1; i < maxPart; i++) {
+		if (i != 0 && i != 13) {
 			//Calcular posicion
 			particles[i].postPos.x = particles[i].position.x + dt * particles[i].vel.x;
 			particles[i].postPos.y = particles[i].position.y + dt * particles[i].vel.y;
 			particles[i].postPos.z = particles[i].position.z + dt * particles[i].vel.z;
 
 			//Calcular velocidad
-			particles[i].postVel.x = particles[i].vel.x + dt * (forceX+particles[i].force.x / particles[i].mass);
-			particles[i].postVel.y = particles[i].vel.y + dt * (forceY+particles[i].force.y / particles[i].mass);
-			particles[i].postVel.z = particles[i].vel.z + dt * (forceZ+particles[i].force.z / particles[i].mass);
+			particles[i].postVel.x = particles[i].vel.x + dt * (forceX + particles[i].force.x / particles[i].mass);
+			particles[i].postVel.y = particles[i].vel.y + dt * (forceY + particles[i].force.y / particles[i].mass);
+			particles[i].postVel.z = particles[i].vel.z + dt * (forceZ + particles[i].force.z / particles[i].mass);
 
 			//Detectar Colisiones
 			float dotProductDown = (normalYDown[0] * particles[i].position.x + normalYDown[1] * particles[i].position.y + normalYDown[2] * particles[i].position.z);
@@ -290,22 +297,22 @@ void PhysicsUpdate(float dt) {
 			//Plano bajo
 			if ((dotProductDown + dDown) * (dotProductPostDown + dDown) <= 0) {
 
-					float dotProductPostVelDown = (normalYDown[0] * particles[i].postVel.x + normalYDown[1] * particles[i].postVel.y + normalYDown[2] * particles[i].postVel.z);
-					float dotProductVelDown = (normalYDown[0] * particles[i].vel.x + normalYDown[1] * particles[i].vel.y + normalYDown[2] * particles[i].vel.z);
-					float normalVel[3] = { dotProductVelDown * normalYDown[0], dotProductVelDown * normalYDown[1], dotProductVelDown * normalYDown[2] };
-					float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
+				float dotProductPostVelDown = (normalYDown[0] * particles[i].postVel.x + normalYDown[1] * particles[i].postVel.y + normalYDown[2] * particles[i].postVel.z);
+				float dotProductVelDown = (normalYDown[0] * particles[i].vel.x + normalYDown[1] * particles[i].vel.y + normalYDown[2] * particles[i].vel.z);
+				float normalVel[3] = { dotProductVelDown * normalYDown[0], dotProductVelDown * normalYDown[1], dotProductVelDown * normalYDown[2] };
+				float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
 
-					particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostDown + dDown)*normalYDown[0];
-					particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostDown + dDown)*normalYDown[1];
-					particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostDown + dDown)*normalYDown[2];
+				particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostDown + dDown)*normalYDown[0];
+				particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostDown + dDown)*normalYDown[1];
+				particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostDown + dDown)*normalYDown[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelDown)*normalYDown[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelDown)*normalYDown[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelDown)*normalYDown[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelDown)*normalYDown[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelDown)*normalYDown[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelDown)*normalYDown[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
 			}
 
 			float dotProductTop = (normalYTop[0] * particles[i].position.x + normalYTop[1] * particles[i].position.y + normalYTop[2] * particles[i].position.z);
@@ -314,22 +321,22 @@ void PhysicsUpdate(float dt) {
 			//Plano alto
 			if ((dotProductTop + dTop) * (dotProductPostTop + dTop) <= 0) {
 
-					float dotProductPostVelTop = (normalYTop[0] * particles[i].postVel.x + normalYTop[1] * particles[i].postVel.y + normalYTop[2] * particles[i].postVel.z);
-					float dotProductVelTop = (normalYTop[0] * particles[i].vel.x + normalYTop[1] * particles[i].vel.y + normalYTop[2] * particles[i].vel.z);
-					float normalVel[3] = { dotProductVelTop * normalYTop[0], dotProductVelTop * normalYTop[1], dotProductVelTop * normalYTop[2] };
-					float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
+				float dotProductPostVelTop = (normalYTop[0] * particles[i].postVel.x + normalYTop[1] * particles[i].postVel.y + normalYTop[2] * particles[i].postVel.z);
+				float dotProductVelTop = (normalYTop[0] * particles[i].vel.x + normalYTop[1] * particles[i].vel.y + normalYTop[2] * particles[i].vel.z);
+				float normalVel[3] = { dotProductVelTop * normalYTop[0], dotProductVelTop * normalYTop[1], dotProductVelTop * normalYTop[2] };
+				float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
 
-					particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostTop + dTop)*normalYTop[0];
-					particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostTop + dTop)*normalYTop[1];
-					particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostTop + dTop)*normalYTop[2];
+				particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostTop + dTop)*normalYTop[0];
+				particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostTop + dTop)*normalYTop[1];
+				particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostTop + dTop)*normalYTop[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelTop)*normalYTop[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelTop)*normalYTop[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelTop)*normalYTop[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelTop)*normalYTop[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelTop)*normalYTop[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelTop)*normalYTop[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
 			}
 
 			float dotProductRight = (normalXRight[0] * particles[i].position.x + normalXRight[1] * particles[i].position.y + normalXRight[2] * particles[i].position.z);
@@ -338,22 +345,22 @@ void PhysicsUpdate(float dt) {
 			//Plano darecha
 			if ((dotProductRight + dRight) * (dotProductPostRight + dRight) <= 0) {
 
-					float dotProductPostVelRight = (normalXRight[0] * particles[i].postVel.x + normalXRight[1] * particles[i].postVel.y + normalXRight[2] * particles[i].postVel.z);
-					float dotProductVelRight = (normalXRight[0] * particles[i].vel.x + normalXRight[1] * particles[i].vel.y + normalXRight[2] * particles[i].vel.z);
-					float normalVel[3] = { dotProductVelRight * normalXRight[0], dotProductVelRight * normalXRight[1], dotProductVelRight * normalXRight[2] };
-					float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
+				float dotProductPostVelRight = (normalXRight[0] * particles[i].postVel.x + normalXRight[1] * particles[i].postVel.y + normalXRight[2] * particles[i].postVel.z);
+				float dotProductVelRight = (normalXRight[0] * particles[i].vel.x + normalXRight[1] * particles[i].vel.y + normalXRight[2] * particles[i].vel.z);
+				float normalVel[3] = { dotProductVelRight * normalXRight[0], dotProductVelRight * normalXRight[1], dotProductVelRight * normalXRight[2] };
+				float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
 
-					particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostRight + dRight)*normalXRight[0];
-					particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostRight + dRight)*normalXRight[1];
-					particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostRight + dRight)*normalXRight[2];
+				particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostRight + dRight)*normalXRight[0];
+				particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostRight + dRight)*normalXRight[1];
+				particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostRight + dRight)*normalXRight[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelRight)*normalXRight[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelRight)*normalXRight[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelRight)*normalXRight[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelRight)*normalXRight[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelRight)*normalXRight[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelRight)*normalXRight[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
 			}
 
 			float dotProductLeft = (normalXLeft[0] * particles[i].position.x + normalXLeft[1] * particles[i].position.y + normalXLeft[2] * particles[i].position.z);
@@ -362,22 +369,22 @@ void PhysicsUpdate(float dt) {
 			//Plano izquierda
 			if ((dotProductLeft + dLeft) * (dotProductPostLeft + dLeft) <= 0) {
 
-					float dotProductPostVelLeft = (normalXLeft[0] * particles[i].postVel.x + normalXLeft[1] * particles[i].postVel.y + normalXLeft[2] * particles[i].postVel.z);
-					float dotProductVelLeft = (normalXLeft[0] * particles[i].vel.x + normalXLeft[1] * particles[i].vel.y + normalXLeft[2] * particles[i].vel.z);
-					float normalVel[3] = { dotProductVelLeft * normalXLeft[0], dotProductVelLeft * normalXLeft[1], dotProductVelLeft * normalXLeft[2] };
-					float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
+				float dotProductPostVelLeft = (normalXLeft[0] * particles[i].postVel.x + normalXLeft[1] * particles[i].postVel.y + normalXLeft[2] * particles[i].postVel.z);
+				float dotProductVelLeft = (normalXLeft[0] * particles[i].vel.x + normalXLeft[1] * particles[i].vel.y + normalXLeft[2] * particles[i].vel.z);
+				float normalVel[3] = { dotProductVelLeft * normalXLeft[0], dotProductVelLeft * normalXLeft[1], dotProductVelLeft * normalXLeft[2] };
+				float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
 
-					particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostLeft + dLeft)*normalXLeft[0];
-					particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostLeft + dLeft)*normalXLeft[1];
-					particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostLeft + dLeft)*normalXLeft[2];
+				particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostLeft + dLeft)*normalXLeft[0];
+				particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostLeft + dLeft)*normalXLeft[1];
+				particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostLeft + dLeft)*normalXLeft[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelLeft)*normalXLeft[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelLeft)*normalXLeft[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelLeft)*normalXLeft[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelLeft)*normalXLeft[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelLeft)*normalXLeft[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelLeft)*normalXLeft[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
 			}
 
 			float dotProductFront = (normalZFront[0] * particles[i].position.x + normalZFront[1] * particles[i].position.y + normalZFront[2] * particles[i].position.z);
@@ -386,22 +393,22 @@ void PhysicsUpdate(float dt) {
 			//Plano frontal
 			if ((dotProductFront + dFront) * (dotProductPostFront + dFront) <= 0) {
 
-					float dotProductPostVelFront = (normalZFront[0] * particles[i].postVel.x + normalZFront[1] * particles[i].postVel.y + normalZFront[2] * particles[i].postVel.z);
-					float dotProductVelFront = (normalZFront[0] * particles[i].vel.x + normalZFront[1] * particles[i].vel.y + normalZFront[2] * particles[i].vel.z);
-					float normalVel[3] = { dotProductVelFront * normalZFront[0], dotProductVelFront * normalZFront[1], dotProductVelFront * normalZFront[2] };
-					float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
+				float dotProductPostVelFront = (normalZFront[0] * particles[i].postVel.x + normalZFront[1] * particles[i].postVel.y + normalZFront[2] * particles[i].postVel.z);
+				float dotProductVelFront = (normalZFront[0] * particles[i].vel.x + normalZFront[1] * particles[i].vel.y + normalZFront[2] * particles[i].vel.z);
+				float normalVel[3] = { dotProductVelFront * normalZFront[0], dotProductVelFront * normalZFront[1], dotProductVelFront * normalZFront[2] };
+				float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
 
-					particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostFront + dFront)*normalZFront[0];
-					particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostFront + dFront)*normalZFront[1];
-					particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostFront + dFront)*normalZFront[2];
+				particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostFront + dFront)*normalZFront[0];
+				particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostFront + dFront)*normalZFront[1];
+				particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostFront + dFront)*normalZFront[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelFront)*normalZFront[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelFront)*normalZFront[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelFront)*normalZFront[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelFront)*normalZFront[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelFront)*normalZFront[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelFront)*normalZFront[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
 			}
 
 			float dotProductBack = (normalZBack[0] * particles[i].position.x + normalZBack[1] * particles[i].position.y + normalZBack[2] * particles[i].position.z);
@@ -410,22 +417,22 @@ void PhysicsUpdate(float dt) {
 			//Plano trasero
 			if ((dotProductBack + dBack) * (dotProductPostBack + dBack) <= 0) {
 
-					float dotProductPostVelBack = (normalZBack[0] * particles[i].postVel.x + normalZBack[1] * particles[i].postVel.y + normalZBack[2] * particles[i].postVel.z);
-					float dotProductVelBack = (normalZBack[0] * particles[i].vel.x + normalZBack[1] * particles[i].vel.y + normalZBack[2] * particles[i].vel.z);
-					float normalVel[3] = { dotProductVelBack * normalZBack[0], dotProductVelBack * normalZBack[1], dotProductVelBack * normalZBack[2] };
-					float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
+				float dotProductPostVelBack = (normalZBack[0] * particles[i].postVel.x + normalZBack[1] * particles[i].postVel.y + normalZBack[2] * particles[i].postVel.z);
+				float dotProductVelBack = (normalZBack[0] * particles[i].vel.x + normalZBack[1] * particles[i].vel.y + normalZBack[2] * particles[i].vel.z);
+				float normalVel[3] = { dotProductVelBack * normalZBack[0], dotProductVelBack * normalZBack[1], dotProductVelBack * normalZBack[2] };
+				float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
 
-					particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostBack + dBack)*normalZBack[0];
-					particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostBack + dBack)*normalZBack[1];
-					particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostBack + dBack)*normalZBack[2];
+				particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostBack + dBack)*normalZBack[0];
+				particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostBack + dBack)*normalZBack[1];
+				particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostBack + dBack)*normalZBack[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelBack)*normalZBack[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelBack)*normalZBack[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelBack)*normalZBack[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelBack)*normalZBack[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelBack)*normalZBack[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelBack)*normalZBack[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
 			}
 
 			//Colisiones Esfera
@@ -473,25 +480,25 @@ void PhysicsUpdate(float dt) {
 				float dotProductColision = (normalColision[0] * particles[i].position.x + normalColision[1] * particles[i].position.y + normalColision[2] * particles[i].position.z);
 				float dotProductPostColision = (normalColision[0] * particles[i].postPos.x + normalColision[1] * particles[i].postPos.y + normalColision[2] * particles[i].postPos.z);
 
-					float dotProductPostVelColision = (normalColision[0] * particles[i].postVel.x + normalColision[1] * particles[i].postVel.y + normalColision[2] * particles[i].postVel.z);
-					float dotProductVelColision = (normalColision[0] * particles[i].vel.x + normalColision[1] * particles[i].vel.y + normalColision[2] * particles[i].vel.z);
-					float normalVel[3] = { dotProductVelColision * normalColision[0], dotProductVelColision * normalColision[1], dotProductVelColision * normalColision[2] };
-					float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
+				float dotProductPostVelColision = (normalColision[0] * particles[i].postVel.x + normalColision[1] * particles[i].postVel.y + normalColision[2] * particles[i].postVel.z);
+				float dotProductVelColision = (normalColision[0] * particles[i].vel.x + normalColision[1] * particles[i].vel.y + normalColision[2] * particles[i].vel.z);
+				float normalVel[3] = { dotProductVelColision * normalColision[0], dotProductVelColision * normalColision[1], dotProductVelColision * normalColision[2] };
+				float tangVel[3] = { particles[i].vel.x - normalVel[0], particles[i].vel.y - normalVel[1], particles[i].vel.z - normalVel[2] };
 
-					particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostColision + dColision)*normalColision[0];
-					particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostColision + dColision)*normalColision[1];
-					particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostColision + dColision)*normalColision[2];
+				particles[i].postPos.x = particles[i].postPos.x - 1.1 * (dotProductPostColision + dColision)*normalColision[0];
+				particles[i].postPos.y = particles[i].postPos.y - 1.1 * (dotProductPostColision + dColision)*normalColision[1];
+				particles[i].postPos.z = particles[i].postPos.z - 1.1 * (dotProductPostColision + dColision)*normalColision[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelColision)*normalColision[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelColision)*normalColision[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelColision)*normalColision[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1.1 * (dotProductPostVelColision)*normalColision[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1.1 * (dotProductPostVelColision)*normalColision[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1.1 * (dotProductPostVelColision)*normalColision[2];
 
-					particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
-					particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
-					particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
+				particles[i].postVel.x = particles[i].postVel.x - 1 * tangVel[0];
+				particles[i].postVel.y = particles[i].postVel.y - 1 * tangVel[1];
+				particles[i].postVel.z = particles[i].postVel.z - 1 * tangVel[2];
 
 			}
-			
+
 			//Aplicar nueva posicion
 			particles[i].position.x = particles[i].postPos.x;
 			particles[i].position.y = particles[i].postPos.y;
@@ -517,4 +524,11 @@ void PhysicsUpdate(float dt) {
 
 void PhysicsCleanup() {
 	//TODO
+}
+
+float RandomFloat(float a, float b) {
+	float random = ((float)rand()) / (float)RAND_MAX;
+	float diff = b - a;
+	float r = random * diff;
+	return a + r;
 }

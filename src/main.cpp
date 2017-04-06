@@ -5,9 +5,12 @@
 #include <imgui\imgui_impl_glfw_gl3.h>
 #include <cstdio>
 #include <glm\glm.hpp>
+#include <time.h>
+#include <iostream>
 
 #include "GL_framework.h"
 
+using namespace std;
 static GLFWwindow *window;
 
 extern void PhysicsInit();
@@ -23,6 +26,8 @@ extern void GLrender();
 
 extern float posSphere[];
 extern float radiusSphere;
+
+bool controlTiempo = false;
 
 namespace Sphere {
 	extern void updateSphere(glm::vec3 pos, float radius = 1.f);
@@ -53,6 +58,7 @@ namespace {
 
 //int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 int main(int argc, char** argv){
+	srand(time(NULL));
 	//Init GLFW
 	if(!glfwInit()) {
 		fprintf(stderr, "Couldn't initialize GLFW\n");
@@ -90,6 +96,16 @@ int main(int argc, char** argv){
 	while(!glfwWindowShouldClose(window)) { // Loop until the user closes the window
 		glfwPollEvents(); // Poll for events
 		ImGui_ImplGlfwGL3_NewFrame();
+
+		if ((int)glfwGetTime() % 5 == 1) {
+			controlTiempo = true;
+		}
+
+		if ((int)glfwGetTime() % 5 == 0 && controlTiempo == true) {
+			PhysicsInit();
+			cout << "no teneis ni idea" << endl;
+			controlTiempo = false;
+		}
 		
 		ImGuiIO& io = ImGui::GetIO();
 		GUI();
@@ -117,3 +133,4 @@ int main(int argc, char** argv){
 	glfwTerminate();
 	return 0;
 }
+
