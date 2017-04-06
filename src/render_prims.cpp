@@ -4,7 +4,7 @@
 #include <cstdio>
 
 //Boolean variables allow to show/hide the primitives
-bool renderSphere = false;
+bool renderSphere = true;
 bool renderCapsule = false;
 bool renderParticles = true;
 bool renderCloth = true;

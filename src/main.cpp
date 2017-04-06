@@ -4,6 +4,7 @@
 #include <imgui\imgui.h>
 #include <imgui\imgui_impl_glfw_gl3.h>
 #include <cstdio>
+#include <glm\glm.hpp>
 
 #include "GL_framework.h"
 
@@ -19,6 +20,13 @@ extern void GLResize(int width, int height);
 extern void GLinit(int width, int height);
 extern void GLcleanup();
 extern void GLrender();
+
+extern float posSphere[];
+extern float radiusSphere;
+
+namespace Sphere {
+	extern void updateSphere(glm::vec3 pos, float radius = 1.f);
+}
 
 namespace {
 	const int expected_fps = 30;
@@ -94,6 +102,8 @@ int main(int argc, char** argv){
 				MouseEvent::Button::None)))};
 			GLmousecb(ev);
 		}
+
+		Sphere::updateSphere(glm::vec3(posSphere[0], posSphere[1], posSphere[2]), radiusSphere);
 
 		GLrender();
 	
