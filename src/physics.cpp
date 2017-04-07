@@ -12,9 +12,7 @@ float RandomFloat(float a, float b);
 float posSphere[3];
 float radiusSphere;
 
-float forceX = 0.0f;
-float forceY = -9.8f;
-float forceZ = 0.0f;
+void PhysicsInit();
 
 //Normales de los planos del eje X
 vec3 normalXRight;
@@ -30,20 +28,23 @@ vec3 normalZBack;
 
 float dDown, dTop, dRight, dLeft, dFront, dBack;
 
+float forceX = 0.0f;
+float forceY = 0.0f;
+float forceZ = 0.0f;
+
 //Parametros Stretch
-float springConstStretch = 1.0f;
-float dampingStretch = 0.1f;
+float springConstStretch = 200.0f;
+float dampingStretch = 70.f;
 
 //Parametros Bend
-float springConstBend = 1.0f;
-float dampingBend = 0.1f;
+float springConstBend = 200.0f;
+float dampingBend = 70.f;
 
 //Parametros Shear
-float springConstShear = 1.0f;
-float dampingShear = 0.1f;
+float springConstShear = 200.0f;
+float dampingShear = 70.f;
 
 struct particle {
-
 	vec3 position;
 	vec3 postPos;
 	vec3 vel;
@@ -56,8 +57,7 @@ struct particle {
 	//vector<particle*> nearPart;
 	vector<pair<int,particle*>> nearPart; //Stretch = 0, Bend = 1, Shear = 2
 
-	float mass;
-
+	float mass = 100.0f;
 };
 
 int maxPart = 14 * 18;
@@ -90,7 +90,10 @@ void GUI() {
 		/*ImGui::DragFloat3("Position", posSphere, 0.1f);
 		ImGui::DragFloat("Radius", &radiusSphere, 0.1f, 0.1f, 10.0f);*/
 
-		ImGui::Begin("\nPropiedades Particulas:");
+		ImGui::Begin("");
+		if (ImGui::Button("Resetear Simulacion")) { PhysicsInit(); }
+				
+		ImGui::Text("\nPropiedades Particulas:");
 		ImGui::DragFloat("Distance", &partDist, 0.1f, 0.1f, 2.0f);
 
 		ImGui::Text("\nPropiedades Stretch:");
@@ -169,12 +172,23 @@ void findNearParts(particle *actualPart, particle *particles) {
 			actualPart->nearPart.push_back(newPart);
 			//actualPart->nearPart.push_back(&particles[i]);
 		}
+		//Diagonales a 2
+		if (particles[i].col == actualPart->col + 2 && (particles[i].row == actualPart->row + 2 || particles[i].row == actualPart->row - 2)
+			|| particles[i].col == actualPart->col - 2 && (particles[i].row == actualPart->row + 2 || particles[i].row == actualPart->row - 2)) {
+			newPart.first = 1; //Shear
+			newPart.second = &particles[i];
+			actualPart->nearPart.push_back(newPart);
+			//actualPart->nearPart.push_back(&particles[i]);
+		}
 	}
 }
 
 
 void PhysicsInit() {
-	radiusSphere = RandomFloat(1, 4);
+
+	cout << "RESET" << endl;
+
+	radiusSphere = RandomFloat(1, 2);
 	posSphere[0] = RandomFloat(-3, 3);
 	posSphere[1] = RandomFloat(1, 5);
 	posSphere[2] = RandomFloat(-3, 3);
@@ -224,7 +238,7 @@ void PhysicsInit() {
 
 	//TODO
 	float initX = -2.0;
-	float initZ = -5.0;
+	float initZ = -4.5;
 	int part = 0;
 	for (int i = 0; i < 18; i++) {
 		for (int j = 0; j < 14; j++) {
@@ -232,7 +246,6 @@ void PhysicsInit() {
 			particles[part].vel = vec3(0.0f, -3.0f, 0.0f);
 			particles[part].row = j;
 			particles[part].col = i;
-			particles[part].mass = 1.0f;
 			part++;
 		}
 	}
@@ -245,41 +258,48 @@ void PhysicsInit() {
 }
 
 void PhysicsUpdate(float dt) {
-	//TODO
-	for (int i = 0; i < maxPart; i++) {
-		if (i != 0 && i != 13) {
+//TODO
+	for (int i = 1; i < maxPart; i++) {
+		if (i != 0 && i != 13) {		
 			//Calcular fuerzas con las particulas adyacentes
 			particles[i].force = vec3(0.0f);
-			for (int j = 0; j < particles[i].nearPart.size(); j++) {
-				vec3 partVec = vec3(particles[i].position.x - particles[i].nearPart[j].second->position.x,
-					particles[i].position.y - particles[i].nearPart[j].second->position.y,
-					particles[i].position.z - particles[i].nearPart[j].second->position.z);
+				for (int j = 0; j < particles[i].nearPart.size(); j++) {
+					vec3 partVec = vec3(particles[i].position.x - particles[i].nearPart[j].second->position.x,
+						particles[i].position.y - particles[i].nearPart[j].second->position.y,
+						particles[i].position.z - particles[i].nearPart[j].second->position.z);
+					float dist = sqrt(pow(partVec.x, 2) + pow(partVec.y, 2) + pow(partVec.z, 2));
 
-				float dist = sqrt(pow(partVec.x, 2) + pow(partVec.y, 2) + pow(partVec.z, 2));
+					partVec.x /= dist;
+					partVec.y /= dist;
+					partVec.z /= dist;
 
-				partVec.x /= dist;
-				partVec.y /= dist;
-				partVec.z /= dist;
+					vec3 partVecVel = vec3(particles[i].vel.x - particles[i].nearPart[j].second->vel.x,
+						particles[i].vel.y - particles[i].nearPart[j].second->vel.y,
+						particles[i].vel.z - particles[i].nearPart[j].second->vel.z);
 
-				vec3 partVecVel = vec3(particles[i].vel.x - particles[i].nearPart[j].second->vel.x,
-					particles[i].vel.y - particles[i].nearPart[j].second->vel.y,
-					particles[i].vel.z - particles[i].nearPart[j].second->vel.z);
+					vec3 springForce = vec3(0.0f);
+					vec3 dampingForce = vec3(0.0f);
 
-				if (particles[i].nearPart[j].first == 0) {
-					particles[i].force += -(springConstStretch * (dist - partDist) + (dampingStretch * partVecVel) * (partVec))*(partVec);
+					if (particles[i].nearPart[j].first == 0) {
+						particles[i].force += -(springConstStretch * (dist - partDist) + (dampingStretch * partVecVel) * (partVec))*(partVec);
+						/*springForce = springConstStretch*(partVec)*(dist - partDist);
+						dampingForce = vec3(dampingStretch*partVecVel.x * (partVec.x), dampingStretch*partVecVel.y * (partVec.y), dampingStretch*partVecVel.z * (partVec.z));
+						particles[i].force += springForce + dampingForce;*/
+					}
+					else if (particles[i].nearPart[j].first == 1) {
+						particles[i].force += -(springConstBend * (dist - partDist*2) + (dampingBend * partVecVel) * (partVec))*(partVec);
+						/*springForce = springConstBend*(partVec)*(dist - partDist);
+						dampingForce = vec3(dampingBend*partVecVel.x * (partVec.x), dampingBend*partVecVel.y * (partVec.y), dampingBend*partVecVel.z * (partVec.z));
+						particles[i].force += springForce + dampingForce;*/
+					}
+					else if (particles[i].nearPart[j].first == 2) {
+						particles[i].force += -(springConstShear * (dist - partDist) + (dampingShear * partVecVel) * (partVec))*(partVec);
+						/*springForce = springConstShear*(partVec)*(dist - partDist);
+						dampingForce = vec3(dampingShear*partVecVel.x * (partVec.x), dampingShear*partVecVel.y * (partVec.y), dampingShear*partVecVel.z * (partVec.z));
+						particles[i].force += springForce + dampingForce;*/
+					}
 				}
-				else if (particles[i].nearPart[j].first == 1) {
-					particles[i].force += -(springConstBend * (dist - partDist * 2) + (dampingBend * partVecVel) * (partVec))*(partVec);
-				}
-				else if (particles[i].nearPart[j].first == 2) {
-					particles[i].force += -(springConstShear * (dist - partDist) + (dampingShear * partVecVel) * (partVec))*(partVec);
-				}
-			}
-		}
-	}
-
-	for (int i = 1; i < maxPart; i++) {
-		if (i != 0 && i != 13) {
+				
 			//Calcular posicion
 			particles[i].postPos.x = particles[i].position.x + dt * particles[i].vel.x;
 			particles[i].postPos.y = particles[i].position.y + dt * particles[i].vel.y;
@@ -440,7 +460,6 @@ void PhysicsUpdate(float dt) {
 			if (dist <= radiusSphere) {
 
 				//Calcular punto de colision
-				///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				float P[3] = { particles[i].position.x, particles[i].position.y, particles[i].position.z };
 				float Q[3] = { particles[i].postPos.x, particles[i].postPos.y, particles[i].postPos.z };
 				float V[3] = { Q[0] - P[0], Q[1] - P[1], Q[2] - P[2] };
@@ -470,11 +489,6 @@ void PhysicsUpdate(float dt) {
 
 				//Calcular colision con el plano tangencial a la esfera con el punto de colision
 				float normalColision[3] = { puntoColision[0] - posSphere[0], puntoColision[1] - posSphere[1], puntoColision[2] - posSphere[2] };
-				/*float normalColMod = sqrt(pow(normalColision[0], 2) + pow(normalColision[1], 2) + pow(normalColision[2], 2));
-				normalColision[0] /= normalColMod;
-				normalColision[1] /= normalColMod;
-				normalColision[2] /= normalColMod;*/
-				//float dColision = -(normalColision[0] * puntoColision[0]) - (normalColision[1] * puntoColision[1]) - (normalColision[2] * puntoColision[2]);
 				float dColision = -(normalColision[0] * puntoColision[0] + normalColision[1] * puntoColision[1] + normalColision[2] * puntoColision[2]);
 
 				float dotProductColision = (normalColision[0] * particles[i].position.x + normalColision[1] * particles[i].position.y + normalColision[2] * particles[i].position.z);
@@ -505,7 +519,7 @@ void PhysicsUpdate(float dt) {
 			particles[i].position.z = particles[i].postPos.z;
 
 			//Aplicar nueva velocidad
-			//particles[i].vel.x = particles[i].postVel.x;
+			particles[i].vel.x = particles[i].postVel.x;
 			particles[i].vel.y = particles[i].postVel.y;
 			particles[i].vel.z = particles[i].postVel.z;
 		}

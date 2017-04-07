@@ -103,7 +103,6 @@ int main(int argc, char** argv){
 
 		if ((int)glfwGetTime() % 5 == 0 && controlTiempo == true) {
 			PhysicsInit();
-			cout << "no teneis ni idea" << endl;
 			controlTiempo = false;
 		}
 		
